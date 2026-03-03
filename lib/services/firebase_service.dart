@@ -10,17 +10,25 @@ class FirebaseService {
   // ---------------------------------------------------------------
   Future<List<Product>> fetchProducts() async {
     try {
-      final snapshot = await _db.collection(_collection).orderBy('name').get();
+      // Luôn lấy từ server, không dùng cache — để bắt lỗi mất mạng
+      const opts = GetOptions(source: Source.server);
+      final snapshot = await _db
+          .collection(_collection)
+          .orderBy('name')
+          .get(opts);
 
       if (snapshot.docs.isEmpty) {
         await _seedSampleProducts();
-        final seeded = await _db.collection(_collection).orderBy('name').get();
+        final seeded = await _db
+            .collection(_collection)
+            .orderBy('name')
+            .get(opts);
         return seeded.docs.map((doc) => Product.fromFirestore(doc)).toList();
       }
 
       return snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
     } on FirebaseException catch (e) {
-      throw Exception('Lỗi Firebase: ${e.message}');
+      throw Exception('Lỗi kết nối: ${e.message}');
     } catch (e) {
       throw Exception('Không thể tải dữ liệu: $e');
     }

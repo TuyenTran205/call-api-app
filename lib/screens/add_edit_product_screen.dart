@@ -1,7 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import '../models/product.dart';
 import '../services/firebase_service.dart';
 
@@ -24,10 +22,9 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   late final TextEditingController _priceCtrl;
   late final TextEditingController _descCtrl;
   late final TextEditingController _stockCtrl;
+  late final TextEditingController _imageUrlCtrl;
 
   String _selectedCategory = 'Bút viết';
-  File? _pickedImageFile;
-  String _existingImageUrl = '';
   bool _isSaving = false;
 
   bool get _isEditing => widget.product != null;
@@ -55,9 +52,9 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _stockCtrl = TextEditingController(
       text: p != null ? p.stock.toString() : '',
     );
+    _imageUrlCtrl = TextEditingController(text: p?.imageUrl ?? '');
     if (p != null) {
       _selectedCategory = p.category;
-      _existingImageUrl = p.imageUrl;
     }
   }
 
@@ -67,23 +64,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _priceCtrl.dispose();
     _descCtrl.dispose();
     _stockCtrl.dispose();
+    _imageUrlCtrl.dispose();
     super.dispose();
-  }
-
-  // ------------------------------------------------------------------
-  // Chọn ảnh từ thư viện máy
-  // ------------------------------------------------------------------
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final XFile? xFile = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-    );
-    if (xFile != null) {
-      setState(() {
-        _pickedImageFile = File(xFile.path);
-      });
-    }
   }
 
   // ------------------------------------------------------------------
@@ -100,19 +82,19 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         name: _nameCtrl.text.trim(),
         price: double.parse(_priceCtrl.text.trim()),
         description: _descCtrl.text.trim(),
-        imageUrl: _existingImageUrl,
+        imageUrl: _imageUrlCtrl.text.trim(),
         category: _selectedCategory,
         stock: int.parse(_stockCtrl.text.trim()),
       );
 
       if (_isEditing) {
-        await _service.updateProduct(product, imageFile: _pickedImageFile);
+        await _service.updateProduct(product);
       } else {
-        await _service.addProduct(product, imageFile: _pickedImageFile);
+        await _service.addProduct(product);
       }
 
       if (mounted) {
-        Navigator.pop(context, true); // trả về true = có thay đổi
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -181,8 +163,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ---- Ảnh sản phẩm ----
-              _buildImageSection(cs),
+              // ---- Ảnh sản phẩm (URL) ----
+              _buildImageSection(),
               const SizedBox(height: 20),
 
               // ---- Tên sản phẩm ----
@@ -303,79 +285,54 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   }
 
   // ------------------------------------------------------------------
-  // Widget phần chọn ảnh
+  // Widget phần nhập URL ảnh
   // ------------------------------------------------------------------
-  Widget _buildImageSection(ColorScheme cs) {
-    Widget imageWidget;
-
-    if (_pickedImageFile != null) {
-      imageWidget = ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.file(
-          _pickedImageFile!,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: 180,
-        ),
-      );
-    } else if (_existingImageUrl.isNotEmpty) {
-      imageWidget = ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.network(
-          _existingImageUrl,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: 180,
-          errorBuilder: (e, o, s) => _imagePlaceholder(cs),
-        ),
-      );
-    } else {
-      imageWidget = _imagePlaceholder(cs);
-    }
-
+  Widget _buildImageSection() {
+    final urlText = _imageUrlCtrl.text.trim();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildLabel('Ảnh sản phẩm'),
-        GestureDetector(
-          onTap: _pickImage,
-          child: Container(
-            height: 180,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: cs.outlineVariant,
-                style: BorderStyle.solid,
+        _buildLabel('Ảnh sản phẩm (URL)'),
+        // Preview ảnh nếu URL hợp lệ
+        if (urlText.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.network(
+                urlText,
+                height: 160,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (ctx, err, stack) => Container(
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Ảnh không tải được',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                ),
               ),
             ),
-            child: imageWidget,
           ),
-        ),
-        const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: _pickImage,
-          icon: const Icon(Icons.photo_library_rounded),
-          label: const Text('Chọn ảnh từ thư viện'),
-        ),
-      ],
-    );
-  }
-
-  Widget _imagePlaceholder(ColorScheme cs) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          Icons.add_photo_alternate_rounded,
-          size: 56,
-          color: cs.onSurfaceVariant,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Nhấn để chọn ảnh',
-          style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+        TextFormField(
+          controller: _imageUrlCtrl,
+          decoration: _inputDeco('https://example.com/image.jpg').copyWith(
+            prefixIcon: const Icon(Icons.link_rounded),
+            suffixIcon: _imageUrlCtrl.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => setState(() => _imageUrlCtrl.clear()),
+                  )
+                : null,
+          ),
+          onChanged: (_) => setState(() {}),
+          keyboardType: TextInputType.url,
         ),
       ],
     );

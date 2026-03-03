@@ -1,11 +1,8 @@
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import '../models/product.dart';
 
 class FirebaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
   static const String _collection = 'products';
 
   // ---------------------------------------------------------------
@@ -32,15 +29,9 @@ class FirebaseService {
   // ---------------------------------------------------------------
   // CREATE: Thêm sản phẩm mới
   // ---------------------------------------------------------------
-  Future<void> addProduct(Product product, {File? imageFile}) async {
+  Future<void> addProduct(Product product) async {
     try {
-      String imageUrl = product.imageUrl;
-      if (imageFile != null) {
-        imageUrl = await _uploadImage(imageFile);
-      }
-      final data = product.toMap();
-      data['imageUrl'] = imageUrl;
-      await _db.collection(_collection).add(data);
+      await _db.collection(_collection).add(product.toMap());
     } on FirebaseException catch (e) {
       throw Exception('Không thể thêm sản phẩm: ${e.message}');
     } catch (e) {
@@ -51,15 +42,9 @@ class FirebaseService {
   // ---------------------------------------------------------------
   // UPDATE: Cập nhật sản phẩm
   // ---------------------------------------------------------------
-  Future<void> updateProduct(Product product, {File? imageFile}) async {
+  Future<void> updateProduct(Product product) async {
     try {
-      String imageUrl = product.imageUrl;
-      if (imageFile != null) {
-        imageUrl = await _uploadImage(imageFile, productId: product.id);
-      }
-      final data = product.toMap();
-      data['imageUrl'] = imageUrl;
-      await _db.collection(_collection).doc(product.id).update(data);
+      await _db.collection(_collection).doc(product.id).update(product.toMap());
     } on FirebaseException catch (e) {
       throw Exception('Không thể cập nhật sản phẩm: ${e.message}');
     } catch (e) {
@@ -73,31 +58,11 @@ class FirebaseService {
   Future<void> deleteProduct(String id) async {
     try {
       await _db.collection(_collection).doc(id).delete();
-      // Thử xóa ảnh trên Storage nếu có
-      try {
-        await _storage.ref('products/$id').delete();
-      } catch (_) {
-        // Bỏ qua lỗi nếu không có ảnh trên Storage
-      }
     } on FirebaseException catch (e) {
       throw Exception('Không thể xóa sản phẩm: ${e.message}');
     } catch (e) {
       throw Exception('Lỗi: $e');
     }
-  }
-
-  // ---------------------------------------------------------------
-  // UPLOAD ảnh lên Firebase Storage
-  // ---------------------------------------------------------------
-  Future<String> _uploadImage(File imageFile, {String? productId}) async {
-    final fileName =
-        productId ?? DateTime.now().millisecondsSinceEpoch.toString();
-    final ref = _storage.ref('products/$fileName.jpg');
-    final uploadTask = await ref.putFile(
-      imageFile,
-      SettableMetadata(contentType: 'image/jpeg'),
-    );
-    return await uploadTask.ref.getDownloadURL();
   }
 
   // ---------------------------------------------------------------

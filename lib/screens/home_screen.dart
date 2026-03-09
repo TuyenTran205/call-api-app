@@ -1,7 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/product.dart';
-import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../widgets/product_card.dart';
 import 'add_edit_product_screen.dart';
@@ -17,7 +15,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final FirebaseService _service = FirebaseService();
-  final AuthService _authService = AuthService();
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -477,35 +474,28 @@ class _HomeScreenState extends State<HomeScreen> {
   // DRAWER
   // ---------------------------------------------------------------
   Widget _buildDrawer(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
     return Drawer(
       child: Column(
         children: [
-          // Header với thông tin user
+          // Header
           DrawerHeader(
             decoration: const BoxDecoration(color: _primaryColor),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Avatar Google
-                CircleAvatar(
+                const CircleAvatar(
                   radius: 32,
                   backgroundColor: Colors.white,
-                  backgroundImage: user?.photoURL != null
-                      ? NetworkImage(user!.photoURL!)
-                      : null,
-                  child: user?.photoURL == null
-                      ? const Icon(
-                          Icons.person_rounded,
-                          size: 38,
-                          color: _primaryColor,
-                        )
-                      : null,
+                  child: Icon(
+                    Icons.school_rounded,
+                    size: 38,
+                    color: _primaryColor,
+                  ),
                 ),
                 const SizedBox(height: 10),
-                Text(
-                  user?.displayName ?? 'Người dùng',
-                  style: const TextStyle(
+                const Text(
+                  'Đồ Dùng Học Tập',
+                  style: TextStyle(
                     color: Colors.white,
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
@@ -513,9 +503,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                Text(
-                  user?.email ?? '',
-                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                const Text(
+                  'TH3 - Trần Văn Tuyên - 2351060495',
+                  style: TextStyle(color: Colors.white70, fontSize: 11),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -560,49 +550,6 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-          const Divider(indent: 16, endIndent: 16),
-
-          // Đăng xuất
-          _DrawerItem(
-            icon: Icons.logout_rounded,
-            label: 'Đăng xuất',
-            onTap: () async {
-              Navigator.pop(context);
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  icon: const Icon(
-                    Icons.logout_rounded,
-                    color: Colors.red,
-                    size: 32,
-                  ),
-                  title: const Text('Xác nhận đăng xuất'),
-                  content: const Text(
-                    'Bạn có chắc muốn đăng xuất khỏi tài khoản Google?',
-                  ),
-                  actionsAlignment: MainAxisAlignment.spaceEvenly,
-                  actions: [
-                    OutlinedButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Hủy'),
-                    ),
-                    FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.red,
-                      ),
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Đăng xuất'),
-                    ),
-                  ],
-                ),
-              );
-              if (confirmed == true) {
-                await _authService.signOut();
-                // StreamBuilder trong main.dart tự điều hướng về LoginScreen
-              }
-            },
-          ),
-
           const Spacer(),
         ],
       ),

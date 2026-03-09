@@ -31,8 +31,17 @@
 
   <title>call_api_app</title>
   <link rel="manifest" href="manifest.json">
+
+  <!--
+    Google Sign-In (yêu cầu cho google_sign_in trên web).
+    Thay YOUR_WEB_CLIENT_ID bằng OAuth 2.0 Client ID (loại "Web application")
+    lấy từ: https://console.cloud.google.com/apis/credentials
+  -->
+  <meta name="google-signin-client_id" content="YOUR_WEB_CLIENT_ID.apps.googleusercontent.com">
 </head>
 <body>
+  <!-- Google Identity Services SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
